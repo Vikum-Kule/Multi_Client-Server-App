@@ -11,26 +11,114 @@ public class Client {
 
 
     public static boolean loginStatus( BufferedReader in, PrintWriter out ) throws IOException{
-        while (true){
-            String sereverResponse = in.readLine();
-            System.out.println(sereverResponse);
-            if(sereverResponse.contains("DB connected..")){
-                sereverResponse = in.readLine();
-                System.out.println(sereverResponse);
-                if(sereverResponse.equals("Login success") || sereverResponse.equals("Signup success")){
-                    return true;
-                }
-            }
-            if (!sereverResponse.equals("check your inputs") && !sereverResponse.equals("Invalid input") ){
-                Scanner scanner = new Scanner(System.in);
-                String command = scanner.nextLine();
-                if (command.equals("exit")){
-                    return false;
-                }
-                out.println(command);
-            }
 
+        Scanner scanner = new Scanner(System.in);
+        Validation validation = new Validation();
+        while (true){
+
+            System.out.println("Login or Signup");
+            String command = scanner.nextLine();
+            if(command.contains("Login")){
+                while (true){
+
+                    System.out.println("Username: ");
+                    String username = scanner.nextLine();
+                    System.out.println("Password: ");
+                    String password = scanner.nextLine();
+
+                    //check input validation
+                    boolean inputflag = false;
+                    if (validation.usernameValidation(username)){
+                        if (validation.passwordValidation(password)){
+                            inputflag = true;
+                        }
+                    }
+                    if (inputflag){
+                        out.println(command);
+                        String loginInputs = "{\"name\":\""+username+"\", \"username\":\""+username+"\", \"password\":\""+password+"\"}";
+                        out.println(loginInputs);
+                        String result = in.readLine();
+                        if (result.contains("Logged")){
+                            return true;
+                        }
+                        else if (result.contains("invalid")){
+                            System.out.println("Check inputs");
+                            continue;
+                        }
+                        else {
+                            System.out.println("Something went wrong.. Try again");
+                        }
+                    }
+                    else {
+                        System.out.println("invalid Format");
+                    }
+                }
+
+            }
+            else if (command.contains("Signup")){
+
+                while (true){
+
+                    System.out.println("Full name: ");
+                    String name = scanner.nextLine();
+                    System.out.println("Username: ");
+                    String username = scanner.nextLine();
+                    System.out.println("Password: ");
+                    String password = scanner.nextLine();
+
+                    //check input validation
+                    boolean inputflag = false;
+                    if (validation.usernameValidation(username)){
+                        if (validation.passwordValidation(password)){
+                            inputflag = true;
+                        }
+                    }
+                    if (inputflag){
+                        out.println(command);
+                        String SignupInputs = "{\"name\":\""+name+"\", \"username\":\""+username+"\", \"password\":\""+password+"\"}";
+                        out.println(SignupInputs);
+                        String result = in.readLine();
+                        if (result.contains("Logged")){
+                            return true;
+                        }
+                        else {
+                            System.out.println("Something went wrong.. Try again");
+                        }
+
+                    }
+                    else {
+                        System.out.println("check inputs");
+                    }
+                }
+            }
+            else if (command.contains("exit")){
+                return false;
+            }
+            else {
+                System.out.println("Wrong input");
+            }
         }
+
+//        while (true){
+//            String sereverResponse = in.readLine();
+//            System.out.println(sereverResponse);
+//            if(sereverResponse.contains("DB connected..")){
+//                sereverResponse = in.readLine();
+//                System.out.println(sereverResponse);
+//                if(sereverResponse.equals("Login success") || sereverResponse.equals("Signup success")){
+//                    return true;
+//                }
+//            }
+//            if (!sereverResponse.equals("check your inputs") && !sereverResponse.equals("Invalid input") ){
+//                Scanner scanner = new Scanner(System.in);
+//                String command = scanner.nextLine();
+//                if (command.equals("exit")){
+//                    return false;
+//                }
+//                out.println(command);
+//            }
+//
+//        }
     }
 
     public static void searchNumber(BufferedReader input, PrintWriter out) throws IOException{

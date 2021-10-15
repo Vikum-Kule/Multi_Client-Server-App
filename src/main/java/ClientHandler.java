@@ -1,3 +1,5 @@
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -26,7 +28,7 @@ public class ClientHandler implements Runnable {
     public void run() {
 
         try {
-            out.println(" Login or Sign up ");
+
             while (true){
 
                 String request = in.readLine();
@@ -34,7 +36,7 @@ public class ClientHandler implements Runnable {
                 if(request.contains("Login")){
                     userLogin();
                 }
-                else if(request.contains("Sign up")){
+                else if(request.contains("Signup")){
                     userSignup();
                 }
                 else if(request.contains("Search") && loginflag){
@@ -137,71 +139,92 @@ public class ClientHandler implements Runnable {
     //Login user
     public void userLogin() throws IOException, SQLException {
         while (true){
-            out.println("Username: ");
-            String username = in.readLine();
-            out.println("Password:");
-            String password = in.readLine();
-            Login login = new Login(username, password);
-            Validation validation = new Validation();
+
+            String input = in.readLine();
+            ObjectMapper mapper = new ObjectMapper();
+
+            LoginStruct loginStruct = mapper.readValue(input, LoginStruct.class);
+            System.out.println(loginStruct.getUsername());
+            Login login = new Login(loginStruct.getUsername(),loginStruct.getPassword());
             if (login.isDbConnected()){
-                out.println("DB connected..");
-                if(validation.usernameValidation(username) && validation.passwordValidation(password)){
-                    boolean resultLogin = login.checkLogin();
-                    if(resultLogin){
-                        loginflag = true;
-                        out.println("Login success");
-                        break;
-                    }
-                    else {
-                        out.println("Invalid input");
-                    }
+                if (login.checkLogin()){
+                    loginflag = true;
+                    out.println("Logged");
+                    break;
                 }
                 else {
-                    out.println("check your inputs");
+                    out.println("invalid");
                 }
             }
             else {
-                out.println("Database disconnected..");
+                out.println("Something went wrong!..");
+                System.out.println("Database not connected.");
             }
-
         }
     }
 
     //user sign up
     public void userSignup() throws IOException, SQLException {
-        while (true){
-            out.println("Name: ");
-            String name = in.readLine();
-            out.println("Username: ");
-            String username = in.readLine();
-            out.println("Password:");
-            String password = in.readLine();
-            Signup signup = new Signup(name,username, password);
-            Validation val = new Validation();
 
-                if (signup.isDbConnected()){
-                    out.println("DB connected..");
-                    if (val.fullNameValidation(name) && val.usernameValidation(username) && val.passwordValidation(password)) {
-                        boolean resultSignup = signup.addUser();
-                        if (resultSignup) {
-                            loginflag = true;
-                            out.println("Signup success");
-                            //go to login..
-                            //userLogin();
-                            break;
-                        } else {
-                            out.println("Something went wrong..");
-                        }
-                    }
-                    else {
-                        out.println("check your inputs");
-                    }
+        while (true){
+
+            String input = in.readLine();
+            System.out.println(input);
+            ObjectMapper mapper = new ObjectMapper();
+
+            LoginStruct loginStruct = mapper.readValue(input, LoginStruct.class);
+            System.out.println(loginStruct.getUsername());
+
+            Signup signup = new Signup(loginStruct.getName(), loginStruct.getUsername(), loginStruct.getPassword());
+            if (signup.isDbConnected()){
+                if (signup.addUser()){
+                    loginflag = true;
+                    out.println("Logged");
+                    break;
                 }
                 else {
-                    out.println("Database disconnected..");
+                    out.println("invalid");
                 }
-
+            }
+            else {
+                out.println("Something went wrong!..");
+                System.out.println("Database not connected.");
+            }
         }
+
+//        while (true){
+//            out.println("Name: ");
+//            String name = in.readLine();
+//            out.println("Username: ");
+//            String username = in.readLine();
+//            out.println("Password:");
+//            String password = in.readLine();
+//            Signup signup = new Signup(name,username, password);
+//            Validation val = new Validation();
+//
+//                if (signup.isDbConnected()){
+//                    out.println("DB connected..");
+//                    if (val.fullNameValidation(name) && val.usernameValidation(username) && val.passwordValidation(password)) {
+//                        boolean resultSignup = signup.addUser();
+//                        if (resultSignup) {
+//                            loginflag = true;
+//                            out.println("Signup success");
+//                            //go to login..
+//                            //userLogin();
+//                            break;
+//                        } else {
+//                            out.println("Something went wrong..");
+//                        }
+//                    }
+//                    else {
+//                        out.println("check your inputs");
+//                    }
+//                }
+//                else {
+//                    out.println("Database disconnected..");
+//                }
+//
+//        }
     }
 
     //using for search patient numbers..
