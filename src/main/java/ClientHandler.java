@@ -1,9 +1,10 @@
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -32,18 +33,25 @@ public class ClientHandler implements Runnable {
             while (true){
 
                 String request = in.readLine();
-                System.out.println("Received : "+ request);
-                if(request.contains("Login")){
-                    userLogin();
+                System.out.println(request);
+                String[] link = request.split("/");
+                System.out.println("Received : "+ link[0]);
+
+                if(link[0].contains("Login")){
+                    userLogin(link);
                 }
-                else if(request.contains("Signup")){
-                    userSignup();
+                else if(link[0].contains("Signup")){
+                    userSignup(link);
                 }
-                else if(request.contains("Search") && loginflag){
-                    numberSearch();
+                else if(link[0].contains("Search") && loginflag){
+                    System.out.println("come search");
+                    numberSearch(link);
                 }
-                else if(request.contains("new") && loginflag){
-                    addPatient();
+                else if(link[0].contains("new") && loginflag){
+                    addPatient(link);
+                }
+                else if(link[0].contains("add") && loginflag){
+                    addRecord(link);
                 }
                 else {
                     out.println(" Wrong input ");
@@ -66,91 +74,64 @@ public class ClientHandler implements Runnable {
 
 
     //Add new Record
-    public  void  addRecord(int p_id) throws IOException, SQLException {
-        while (true){
-            out.println("Record description: ");
-            String description = in.readLine();
+    public  void  addRecord(String[] link) throws IOException, SQLException {
+        String[] p_idSet = link[1].split("%");
+        int p_id = Integer.parseInt(p_idSet[1]);
+        String[] recordSet = link[2].split("%");
+        Record record = new Record(p_id,recordSet[1], "");
 
-            //check inputs
-            boolean checkInputs = false;
-            Validation validation = new Validation();
-            if (validation.fullNameValidation(description)){
-                checkInputs = true;
-            }
-            if(checkInputs){
-                Record record = new Record(p_id,description,"");
-                PatientData patientData = new PatientData();
-                boolean result = patientData.newRecord(record);
-                if (result){
-                    out.println("Record added");
-                    break;
-                }
-                else {
-                    out.println("Something went wrong..");
-                    break;
-                }
-            }
-            else {
-                out.println("Wrong input");
-            }
+        PatientData patientData = new PatientData();
+        boolean result = patientData.newRecord(record);
+        if(result){
+            out.println("Record added");
         }
+        else {
+            out.println("Something went wrong");
+        }
+
     }
 
     //Add new patient
-    public  void  addPatient() throws IOException, SQLException {
-        while (true){
-            out.println("Enter patient name: ");
-            String p_name = in.readLine();
-            out.println("Enter patient phone number");
-            String p_number = in.readLine();
-            out.println("Enter patient age: ");
-            String p_age = in.readLine();
+    public  void  addPatient(String[] link) throws IOException, SQLException {
 
-            //check inputs
-            boolean checkInputs = false;
-            Validation validation = new Validation();
-            if (validation.fullNameValidation(p_name)){
-                if (validation.phoneValidation(p_number)){
-                    if (validation.ageValidation(p_age)){
-                        checkInputs = true;
-                    }
-                }
-            }
+        String input = link[1];
+        System.out.println(input);
+        ObjectMapper mapper = new ObjectMapper();
 
-            if(checkInputs){
-                int year = Calendar.getInstance().get(Calendar.YEAR);
-                int newAge = Integer.parseInt(p_age);
-                int bornYear = year - newAge;
-                Patient patient = new Patient(p_name,0,bornYear,p_number);
-                PatientData patientData = new PatientData();
-                int p_id = patientData.addPatient(patient);
-                if (p_id != 0){
-                    out.println("Patient added successfully");
-                    addRecord(p_id);
-                    break;
-                }
-            }
-            else {
-                out.println("Wrong input");
-            }
+        PatientStructServer patient = mapper.readValue(input, PatientStructServer.class);
+        String p_name = patient.getName();
+        String p_age = patient.getAge();
+        String p_phone = patient.getPhone();
+
+        int year = Calendar.getInstance().get(Calendar.YEAR);
+        int newAge = Integer.parseInt(p_age);
+        int bornYear = year - newAge;
+        Patient patientAdd = new Patient(p_name,0,bornYear,p_phone);
+        PatientData patientData = new PatientData();
+        int p_id = patientData.addPatient(patientAdd);
+        if (p_id != 0){
+            out.println("Patient added successfully/p_id%"+p_id);
         }
+        else {
+            out.println("Something went wrong...");
+        }
+
     }
 
     //Login user
-    public void userLogin() throws IOException, SQLException {
-        while (true){
-
-            String input = in.readLine();
+    public void userLogin(String[] link) throws IOException, SQLException {
+            for (int x=0; x<link.length; x++){
+                System.out.println(link[x]);
+            }
             ObjectMapper mapper = new ObjectMapper();
 
-            LoginStruct loginStruct = mapper.readValue(input, LoginStruct.class);
+            LoginStruct loginStruct = mapper.readValue(link[1], LoginStruct.class);
             System.out.println(loginStruct.getUsername());
             Login login = new Login(loginStruct.getUsername(),loginStruct.getPassword());
             if (login.isDbConnected()){
                 if (login.checkLogin()){
                     loginflag = true;
                     out.println("Logged");
-                    break;
                 }
                 else {
                     out.println("invalid");
@@ -160,15 +141,13 @@ public class ClientHandler implements Runnable {
                 out.println("Something went wrong!..");
                 System.out.println("Database not connected.");
             }
-        }
     }
 
     //user sign up
-    public void userSignup() throws IOException, SQLException {
+    public void userSignup(String[] link) throws IOException, SQLException {
 
-        while (true){
 
-            String input = in.readLine();
+            String input = link[1];
             System.out.println(input);
             ObjectMapper mapper = new ObjectMapper();
 
@@ -180,7 +159,6 @@ public class ClientHandler implements Runnable {
                 if (signup.addUser()){
                     loginflag = true;
                     out.println("Logged");
-                    break;
                 }
                 else {
                     out.println("invalid");
@@ -190,130 +168,130 @@ public class ClientHandler implements Runnable {
                 out.println("Something went wrong!..");
                 System.out.println("Database not connected.");
             }
-        }
 
-//        while (true){
-//            out.println("Name: ");
-//            String name = in.readLine();
-//            out.println("Username: ");
-//            String username = in.readLine();
-//            out.println("Password:");
-//            String password = in.readLine();
-//            Signup signup = new Signup(name,username, password);
-//            Validation val = new Validation();
-//
-//                if (signup.isDbConnected()){
-//                    out.println("DB connected..");
-//                    if (val.fullNameValidation(name) && val.usernameValidation(username) && val.passwordValidation(password)) {
-//                        boolean resultSignup = signup.addUser();
-//                        if (resultSignup) {
-//                            loginflag = true;
-//                            out.println("Signup success");
-//                            //go to login..
-//                            //userLogin();
-//                            break;
-//                        } else {
-//                            out.println("Something went wrong..");
-//                        }
-//                    }
-//                    else {
-//                        out.println("check your inputs");
-//                    }
-//                }
-//                else {
-//                    out.println("Database disconnected..");
-//                }
-//
-//        }
     }
 
     //using for search patient numbers..
-    public void numberSearch() throws IOException, SQLException {
+    public void numberSearch(String []link) throws IOException, SQLException {
 //        List<Patient> data = new ArrayList<Patient>();
-        boolean flag = true;
-        while (flag){
-            out.println("Enter patient phone number: ");
-            String phone = in.readLine();
-            Validation validation = new Validation();
-            if (validation.phoneValidation(phone)){
-                flag=false;
-                PatientData patientData = new PatientData();
-                List<Patient> data = patientData.customerSet(phone);
-                if (data.isEmpty()){
-                    out.println("Phone number is not exist");
-                }
-                else {
-                    int year = Calendar.getInstance().get(Calendar.YEAR);
-                    for (int x = 0; x<data.size(); x++){
-                        int age = year - data.get(x).year;
-                        out.println(data.get(x).name+ " "+age + "  "+ data.get(x).id);
-                    }
-                    out.println("Enter patient Id to get records: ");
-                    String id = in.readLine();
-                    int p_id = Integer.parseInt(id);
-                    //checking input value is contains in the array or not
-                    boolean checkId = false;
-                    String pName = "";
-                    int pAge= 0;
-                    for (int x = 0; x<data.size(); x++){
-                        if (data.get(x).id == p_id){
-                            pName = data.get(x).name;
-                            pAge = year-data.get(x).year;
-                            checkId = true;
-                        }
-                    }
-                    if (checkId){
-                        out.println("Patient: "+ pName+ "   "+ "Age: "+ pAge + " Id: "+p_id);
-                        List<Record> records = patientData.fetchRecords(p_id);
-                        if (records.isEmpty()){
-                            out.println("Add records -> Enter 'add'");
-                            out.println("Exit records -> press 'n'");
-                            String input = in.readLine();
-                            System.out.println(input);
-                            if (input.contains("n")){
-                                continue;
-                            }
-                            else if (input.contains("add")){
-                                addRecord(p_id);
-                            }
-                        }
-                        else {
-                            for (int x = 0; x<records.size(); x++){
-                                out.println(records.get(x).date);
-                                out.println(records.get(x).record);
-                                out.println("----------------------------------------------");
-                                if (x+1 < records.size()){
-                                    out.println("See next record-> press 'y'");
-                                }
-                                out.println("Add records -> Enter 'add'");
-                                out.println("Exit records -> press 'n'");
+        ObjectMapper objectMapper = new ObjectMapper();
+        PatientData patientData = new PatientData();
+        objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+        if (link.length==2) {
+            String[] Num_inputs = link[1].split("%");
+            String phone = Num_inputs[1];
+            List<Patient> data = patientData.customerSet(phone);
+            if (data.isEmpty()) {
+                out.println("Phone number is not exist");
+            } else {
+                //Set pretty printing of json
+                //objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
 
-                                String input = in.readLine();
-                                System.out.println(input);
-                                if (input.contains("n")){
-                                    break;
-                                }
-                                else if (input.contains("y") && x+1 < records.size()){
-                                    continue;
-                                }
-                                else if (input.contains("add")){
-                                    addRecord(p_id);
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        out.println("Wrong input");
-                    }
-                }
 
+                //1. Convert List of Person objects to JSON
+                String arrayToJson = objectMapper.writeValueAsString(data);
+                System.out.println("1. Convert List of person objects to JSON :");
+                System.out.println(arrayToJson);
+                out.println(arrayToJson);
             }
-            else {
-                out.println("Recheck Phone number");
+
+        }else {
+                //patient id -> get records
+                String[] id_inputs = link[2].split("%");
+                String id = id_inputs[1];
+                int p_id = Integer.parseInt(id);
+                List<Record> records = patientData.fetchRecords(p_id);
+                String recordsToJson = objectMapper.writeValueAsString(records);
+                System.out.println(recordsToJson);
+                out.println(recordsToJson);
             }
+
         }
 
+//        boolean flag = true;
+//        while (flag){
+//            out.println("Enter patient phone number: ");
+//            String phone = in.readLine();
+//            Validation validation = new Validation();
+//            if (validation.phoneValidation(phone)){
+//                flag=false;
+//                PatientData patientData = new PatientData();
+//                List<Patient> data = patientData.customerSet(phone);
+//                if (data.isEmpty()){
+//                    out.println("Phone number is not exist");
+//                }
+//                else {
+//                    int year = Calendar.getInstance().get(Calendar.YEAR);
+//                    for (int x = 0; x<data.size(); x++){
+//                        int age = year - data.get(x).year;
+//                        out.println(data.get(x).name+ " "+age + "  "+ data.get(x).id);
+//                    }
+//                    out.println("Enter patient Id to get records: ");
+//                    String id = in.readLine();
+//                    int p_id = Integer.parseInt(id);
+//                    //checking input value is contains in the array or not
+//                    boolean checkId = false;
+//                    String pName = "";
+//                    int pAge= 0;
+//                    for (int x = 0; x<data.size(); x++){
+//                        if (data.get(x).id == p_id){
+//                            pName = data.get(x).name;
+//                            pAge = year-data.get(x).year;
+//                            checkId = true;
+//                        }
+//                    }
+//                    if (checkId){
+//                        out.println("Patient: "+ pName+ "   "+ "Age: "+ pAge + " Id: "+p_id);
+//                        List<Record> records = patientData.fetchRecords(p_id);
+//                        if (records.isEmpty()){
+//                            out.println("Add records -> Enter 'add'");
+//                            out.println("Exit records -> press 'n'");
+//                            String input = in.readLine();
+//                            System.out.println(input);
+//                            if (input.contains("n")){
+//                                continue;
+//                            }
+//                            else if (input.contains("add")){
+//                                addRecord(p_id);
+//                            }
+//                        }
+//                        else {
+//                            for (int x = 0; x<records.size(); x++){
+//                                out.println(records.get(x).date);
+//                                out.println(records.get(x).record);
+//                                out.println("----------------------------------------------");
+//                                if (x+1 < records.size()){
+//                                    out.println("See next record-> press 'y'");
+//                                }
+//                                out.println("Add records -> Enter 'add'");
+//                                out.println("Exit records -> press 'n'");
+//
+//                                String input = in.readLine();
+//                                System.out.println(input);
+//                                if (input.contains("n")){
+//                                    break;
+//                                }
+//                                else if (input.contains("y") && x+1 < records.size()){
+//                                    continue;
+//                                }
+//                                else if (input.contains("add")){
+//                                    addRecord(p_id);
+//                                }
+//                            }
+//                        }
+//                    }
+//                    else {
+//                        out.println("Wrong input");
+//                    }
+//                }
+//
+//            }
+//            else {
+//                out.println("Recheck Phone number");
+//            }
+//        }
 
-    }
+
+
 
 }
