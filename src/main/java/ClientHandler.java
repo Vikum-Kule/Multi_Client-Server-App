@@ -43,14 +43,14 @@ public class ClientHandler implements Runnable {
                 else if(link[0].contains("Signup")){
                     userSignup(link);
                 }
-                else if(link[0].contains("Search") && loginflag){
+                else if(link[0].contains("Search")){
                     System.out.println("come search");
                     numberSearch(link);
                 }
-                else if(link[0].contains("new") && loginflag){
+                else if(link[0].contains("new")){
                     addPatient(link);
                 }
-                else if(link[0].contains("add") && loginflag){
+                else if(link[0].contains("add")){
                     addRecord(link);
                 }
                 else {
@@ -78,7 +78,10 @@ public class ClientHandler implements Runnable {
         String[] p_idSet = link[1].split("%");
         int p_id = Integer.parseInt(p_idSet[1]);
         String[] recordSet = link[2].split("%");
-        Record record = new Record(p_id,recordSet[1], "");
+        String[] d_idSet = link[3].split("%");
+        int d_id = Integer.parseInt(d_idSet[1]);
+
+        Record record = new Record(p_id,recordSet[1], "", d_id);
 
         PatientData patientData = new PatientData();
         boolean result = patientData.newRecord(record);
@@ -129,9 +132,11 @@ public class ClientHandler implements Runnable {
             System.out.println(loginStruct.getUsername());
             Login login = new Login(loginStruct.getUsername(),loginStruct.getPassword());
             if (login.isDbConnected()){
-                if (login.checkLogin()){
+                String result = login.checkLogin();
+                String[] resultSet = result.split("/");
+                if (resultSet[0].contains("true")){
                     loginflag = true;
-                    out.println("Logged");
+                    out.println("Logged/"+resultSet[1]);
                 }
                 else {
                     out.println("invalid");
@@ -155,10 +160,13 @@ public class ClientHandler implements Runnable {
             System.out.println(loginStruct.getUsername());
 
             Signup signup = new Signup(loginStruct.getName(), loginStruct.getUsername(), loginStruct.getPassword());
+
             if (signup.isDbConnected()){
-                if (signup.addUser()){
+                String result = signup.addUser();
+                String[] resultSet = result.split("/");
+                if (resultSet[0].contains("true")){
                     loginflag = true;
-                    out.println("Logged");
+                    out.println("Logged/"+resultSet[1]);
                 }
                 else {
                     out.println("invalid");
@@ -200,96 +208,13 @@ public class ClientHandler implements Runnable {
                 String[] id_inputs = link[2].split("%");
                 String id = id_inputs[1];
                 int p_id = Integer.parseInt(id);
-                List<Record> records = patientData.fetchRecords(p_id);
+                List<RecordFetch> records = patientData.fetchRecords(p_id);
                 String recordsToJson = objectMapper.writeValueAsString(records);
                 System.out.println(recordsToJson);
                 out.println(recordsToJson);
             }
 
         }
-
-//        boolean flag = true;
-//        while (flag){
-//            out.println("Enter patient phone number: ");
-//            String phone = in.readLine();
-//            Validation validation = new Validation();
-//            if (validation.phoneValidation(phone)){
-//                flag=false;
-//                PatientData patientData = new PatientData();
-//                List<Patient> data = patientData.customerSet(phone);
-//                if (data.isEmpty()){
-//                    out.println("Phone number is not exist");
-//                }
-//                else {
-//                    int year = Calendar.getInstance().get(Calendar.YEAR);
-//                    for (int x = 0; x<data.size(); x++){
-//                        int age = year - data.get(x).year;
-//                        out.println(data.get(x).name+ " "+age + "  "+ data.get(x).id);
-//                    }
-//                    out.println("Enter patient Id to get records: ");
-//                    String id = in.readLine();
-//                    int p_id = Integer.parseInt(id);
-//                    //checking input value is contains in the array or not
-//                    boolean checkId = false;
-//                    String pName = "";
-//                    int pAge= 0;
-//                    for (int x = 0; x<data.size(); x++){
-//                        if (data.get(x).id == p_id){
-//                            pName = data.get(x).name;
-//                            pAge = year-data.get(x).year;
-//                            checkId = true;
-//                        }
-//                    }
-//                    if (checkId){
-//                        out.println("Patient: "+ pName+ "   "+ "Age: "+ pAge + " Id: "+p_id);
-//                        List<Record> records = patientData.fetchRecords(p_id);
-//                        if (records.isEmpty()){
-//                            out.println("Add records -> Enter 'add'");
-//                            out.println("Exit records -> press 'n'");
-//                            String input = in.readLine();
-//                            System.out.println(input);
-//                            if (input.contains("n")){
-//                                continue;
-//                            }
-//                            else if (input.contains("add")){
-//                                addRecord(p_id);
-//                            }
-//                        }
-//                        else {
-//                            for (int x = 0; x<records.size(); x++){
-//                                out.println(records.get(x).date);
-//                                out.println(records.get(x).record);
-//                                out.println("----------------------------------------------");
-//                                if (x+1 < records.size()){
-//                                    out.println("See next record-> press 'y'");
-//                                }
-//                                out.println("Add records -> Enter 'add'");
-//                                out.println("Exit records -> press 'n'");
-//
-//                                String input = in.readLine();
-//                                System.out.println(input);
-//                                if (input.contains("n")){
-//                                    break;
-//                                }
-//                                else if (input.contains("y") && x+1 < records.size()){
-//                                    continue;
-//                                }
-//                                else if (input.contains("add")){
-//                                    addRecord(p_id);
-//                                }
-//                            }
-//                        }
-//                    }
-//                    else {
-//                        out.println("Wrong input");
-//                    }
-//                }
-//
-//            }
-//            else {
-//                out.println("Recheck Phone number");
-//            }
-//        }
 
 
 

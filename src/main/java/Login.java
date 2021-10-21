@@ -26,10 +26,10 @@ public class Login {
             return false;
         }
     }
-    public boolean checkLogin() throws SQLException{
+    public String checkLogin() throws SQLException{
         System.out.println("Username: "+ username);
         System.out.println("Password: "+ password);
-
+        int userId = 0;
         //initializing stetement and result set..
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
@@ -44,14 +44,17 @@ public class Login {
 
             resultSet = preparedStatement.executeQuery();
             if(resultSet.next()){
-                return true;
+                userId = resultSet.getInt("user_id");
+                String result = "true/"+userId;
+                return result;
+                //return true;
             }
             else{
-                return false;
+                return "false";
             }
         } catch (SQLException e) {
             System.out.println( e );
-            return false;
+            return "false";
         } finally{
 
             preparedStatement.close();

@@ -22,11 +22,16 @@ public class DataServer {
                 ClientHandler clienThread = new ClientHandler(client);
                 clients.add(clienThread);
                 pool.execute(clienThread);
+                for (int i = 0; i<clients.size(); i++){
+                    System.out.println("Client: "+clients.get(i).toString());
+                }
             }
 
 
         } catch (IOException e) {
-            e.printStackTrace();
+            for (int i = 0; i<clients.size(); i++){
+                System.out.println("Client: "+clients.get(i).toString());
+            }
         }
     }
 }

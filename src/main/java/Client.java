@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -13,9 +14,12 @@ import java.util.concurrent.TimeUnit;
 public class Client {
     private  static final String SERVER = "127.0.0.1";
     private  static final int PORT = 9090;
+    static Socket socket= null;
+    static BufferedReader input=null;
+    static PrintWriter out=null;
+    static String clientId = "";
 
-
-    public static boolean loginStatus( BufferedReader in, PrintWriter out ) throws IOException{
+    public static boolean loginStatus( BufferedReader in, PrintWriter out ) throws IOException, InterruptedException {
 
         Scanner scanner = new Scanner(System.in);
         Validation validation = new Validation();
@@ -41,9 +45,12 @@ public class Client {
                     if (inputflag){
                         //out.println(command);
                         String loginInputs = "Login/{\"name\":\""+username+"\", \"username\":\""+username+"\", \"password\":\""+password+"\"}";
-                        out.println(loginInputs);
-                        String result = in.readLine();
+                        //out.println(loginInputs);
+                        String result = checkConnectionOUT(loginInputs, in, out);
+                        String[] resultSet = result.split("/");
+                        System.out.println(result);
                         if (result.contains("Logged")){
+                            clientId = resultSet[1];
                             return true;
                         }
                         else if (result.contains("invalid")){
@@ -79,11 +86,14 @@ public class Client {
                         }
                     }
                     if (inputflag){
-                        out.println(command);
+                        //out.println(command);
                         String SignupInputs = "Signup/{\"name\":\""+name+"\", \"username\":\""+username+"\", \"password\":\""+password+"\"}";
-                        out.println(SignupInputs);
-                        String result = in.readLine();
+                        //out.println(SignupInputs);
+                        String result = checkConnectionOUT(SignupInputs, in, out);
+                        String[] resultSet = result.split("/");
+
                         if (result.contains("Logged")){
+                            clientId = resultSet[1];
                             return true;
                         }
                         else {
@@ -106,7 +116,8 @@ public class Client {
     }
 
     public static void searchNumber(BufferedReader input, PrintWriter out) throws IOException, InterruptedException {
-        while (true){
+        boolean searchAgain= true;
+        while (searchAgain){
 
             System.out.println("Enter User Phone number: ");
             Scanner scanner = new Scanner(System.in);
@@ -124,13 +135,14 @@ public class Client {
                     System.out.println("Exit-> exit");
                     String command = scanner.nextLine();
                     if (command.contains("A")){
-                        continue;
+                        searchAgain=true;
                     }
                     else if (command.contains("B")){
-
+                        addPatient(input, out);
+                        searchAgain=false;
                     }
                     else {
-                        break;
+                        searchAgain=false;
                     }
                 }
                 else {
@@ -152,8 +164,7 @@ public class Client {
                     String id = scanner.nextLine();
                     int index = Integer.parseInt(id);
                     String p_id = String.valueOf(patientList.get(index).id);
-                    p_id = "Search/phone%"+number+"/p_id%"+p_id;
-                    response= checkConnectionOUT(p_id,input,out);
+                    response= checkConnectionOUT("Search/phone%"+number+"/p_id%"+p_id,input,out);
 
                     // fetch Records for selected patient
                     List<RecordStruct> records = new ArrayList<>();
@@ -163,6 +174,7 @@ public class Client {
 
                         System.out.println("Date: "+records.get(i).date);
                         System.out.println("Record: "+records.get(i).record);
+                        System.out.println("Added by: "+records.get(i).d_name);
                         System.out.println("------------------------------------------------\n");
                         if (i+1 < records.size()){
                             System.out.println("See next record-> press 'y'");
@@ -171,12 +183,16 @@ public class Client {
                         System.out.println("Exit records -> press 'exit'");
                         String command = scanner.nextLine();
                         if (command.contains("add")){
-
+                            addRecord( p_id, input, out);
+                            searchAgain=false;
+                            break;
                         }
                         else if (command.contains("exit")){
+                            searchAgain=false;
                             break;
                         }
                         else {
+                            searchAgain=true;
                             continue;
                         }
 
@@ -192,72 +208,56 @@ public class Client {
         }
 
 
-
-//        Scanner scanner = new Scanner(System.in);
-//        String command;
-//        while (true){
-//
-//            String sereverResponse = input.readLine();
-//            if (sereverResponse.equals(null)){
-//                break;
-//            }
-//            System.out.println(sereverResponse);
-//            if (sereverResponse.contains("Enter patient phone number: ")){
-//                command = scanner.nextLine();
-//                out.println(command);
-//            }
-//            else if(sereverResponse.equals("Phone number is not exist")|| sereverResponse.equals("Record added")|| sereverResponse.equals("Something went wrong..")){
-//                break;
-//            }
-//            else if (sereverResponse.equals("Enter patient Id to get records: ")|| sereverResponse.equals("Record description: ")|| sereverResponse.equals("Wrong input")){
-//                command = scanner.nextLine();
-//                out.println(command);
-//            }
-//            else if (sereverResponse.contains("Exit records -> press 'n'")){
-//                command = scanner.nextLine();
-//                if (command.contains("y") || command.contains("add")){
-//                    out.println(command);
-//                }
-//                else if (command.contains("n")){
-//                    break;
-//                }
-//
-//            }
-//
-//        }
     }
 
-    public static String checkConnectionOUT(String input, BufferedReader in, PrintWriter out) throws InterruptedException {
+    public static String checkConnectionOUT(String request, BufferedReader in, PrintWriter outServer) throws InterruptedException {
         boolean retry=true;
+        boolean serverDown= false;
         String reply= "";
         int retryCount= 1;
-        int i=1;
-        StringBuilder sb = new StringBuilder();
+        System.out.println("request: "+ request);
         while (retry){
             try {
-                out.println(input);
-                if (!input.equals("Search")){
-                    reply = in.readLine();
+                if(serverDown){
+                    socket = new Socket(SERVER, PORT);
+                    socket.setSoTimeout(2*1000);
+                    //System.out.println("Come to server down ");
+                   // Socket socket = new Socket();
+                    //socket.connect(new InetSocketAddress(SERVER, PORT), 1000);
+                    //System.out.println("pass server down ");
+                    input = new BufferedReader( new InputStreamReader( socket.getInputStream()));
+                    out = new PrintWriter(socket.getOutputStream(), true);
+                    serverDown = false;
+                    System.out.println("Connected..");
+                }
+                out.println(request);
+                if (!request.equals("Search")){
+                    reply = input.readLine();
+                    System.out.println("reply"+reply);
                 }
                 retry = false;
-            }catch (IOException e){
+            }catch (Exception e){
+                //System.out.println(e);
+                retryCount++;
+                if (retryCount>=3){
+                    System.out.println("Retry again? y/n");
+                    Scanner scanner = new Scanner(System.in);
+                    String command = scanner.nextLine();
+                    if (command.contains("n")){
+                        retry=false;
+                    }
+                    else{
+                        continue;
+                    }
+
+                }
+
                 if (e.toString().contains("java.net.SocketException: Connection reset")){
                     System.out.println("Server down");
-                    System.out.println("Retrying");
+                    System.out.println("Retrying...............");
                     TimeUnit.SECONDS.sleep(3);
-                    retryCount++;
-                    if (retryCount==3){
-                        System.out.println("Retry again? y/n");
-                        Scanner scanner = new Scanner(System.in);
-                        String command = scanner.nextLine();
-                        if (command.contains("n")){
-                            retry=false;
-                        }
-                        else{
-                            continue;
-                        }
+                    serverDown=true;
 
-                    }
             }
         }
 
@@ -295,7 +295,7 @@ public class Client {
 
             System.out.println("Enter Record: ");
             record = scanner.nextLine();
-            String response = checkConnectionOUT("add/p_id%"+id+"/record%"+record,in,out);
+            String response = checkConnectionOUT("add/p_id%"+id+"/record%"+record+"/doctorId%"+clientId,in,out);
             System.out.println(response);
             if (response.equals("Record added")){
                 break;
@@ -306,11 +306,10 @@ public class Client {
 
 
     public static  void main (String[] args) throws InterruptedException, IOException {
-        BufferedReader input=null;
-        PrintWriter out=null;
+
         boolean loginFalg= false;
         try {
-            Socket socket = new Socket(SERVER, PORT);
+            socket = new Socket(SERVER, PORT);
             input = new BufferedReader( new InputStreamReader( socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
             loginFalg = loginStatus(input, out);
@@ -319,13 +318,13 @@ public class Client {
             System.err.println(e);
         }
 
-
+    while (true){
         if (loginFalg){
             System.out.println("If you want to search user, type 'Search'");
             System.out.println("If you want to add new patient user, type 'new'");
             Scanner scanner = new Scanner(System.in);
             String command = scanner.nextLine();
-//            String response = checkConnectionOUT(command+"/", input,out);
+
             if (command.contains("Search")){
                 searchNumber(input, out);
             }
@@ -333,62 +332,7 @@ public class Client {
                 addPatient(input,out);
             }
         }
-//        while (retry){
-//            try {
-//                if(loginFalg){
-//                    while (true){
-//                        System.out.println("If you want to search user, type 'Search'");
-//                        System.out.println("If you want to add new patient user, type 'new'");
-//                        String command = "new";
-//                        Scanner scanner = new Scanner(System.in);
-//                        checkConnectionOUT(input,out);
-//                        //out.println(command);
-//                        if (command.contains("Search")){
-//                            searchNumber(input, out);
-//                        }
-//                        else if (command.contains("new")){
-//
-//                            while (true){
-//                                String serevrResponse = input.readLine();
-//                                System.out.println(serevrResponse);
-//                                if (serevrResponse.contains("Record added")){
-//                                    System.out.println("Break");
-//                                    break;
-//                                }
-//                                if (!serevrResponse.equals("Wrong input") && !serevrResponse.contains("Patient added successfully")){
-//                                    command = scanner.nextLine();
-//                                    out.println(command);
-//                                }
-//
-//                            }
-//                        }
-//
-//                    }
-//                }
-//
-//            } catch (IOException e) {
-//                if (e.toString().contains("java.net.SocketException: Connection reset")){
-//                    System.out.println("Server down");
-//                    System.out.println("Retrying");
-//                    TimeUnit.SECONDS.sleep(3);
-//                    retryCount++;
-//                    if (retryCount==3){
-//                        System.out.println("Retry again? y/n");
-//                        Scanner scanner = new Scanner(System.in);
-//                        String command = scanner.nextLine();
-//                        if (command.contains("n")){
-//                            retry=false;
-//                        }
-//                        else{
-//                            continue;
-//                        }
-//
-//                    }
-//
-//                }
-//            }
-//        }
-
+    }
     }
 
 

@@ -54,14 +54,17 @@ public class PatientData {
         }
     }
 
-    public List<Record> fetchRecords(int p_id){
+    public List<RecordFetch> fetchRecords(int p_id){
         String record = "";
         int id = 0;
         String date = null;
-        List<Record> data = new ArrayList<Record>();
+        String d_name=null;
+        List<RecordFetch> data = new ArrayList<RecordFetch>();
         try {
 
-            String query = "select date,Record from patientRecords where patient_id = ?";
+//            String query = "select date,Record from patientRecords where patient_id = ?";
+            String query = "SELECT date,Record,full_name FROM patientRecords " +
+                    "INNER JOIN user ON user.user_id =patientRecords.doctorId where patient_id = ?";
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setInt(1, p_id);
             ResultSet set = statement.executeQuery();
@@ -70,8 +73,10 @@ public class PatientData {
                 System.out.println("have");
                 record = set.getString("Record");
                 date = set.getString("date");
+                d_name = set.getString("full_name");
+
                 System.out.println(date);
-                data.add( new Record(p_id,record,date));
+                data.add( new RecordFetch(p_id,record,date,d_name));
             }
 
             statement.close();
@@ -116,10 +121,11 @@ public class PatientData {
 
         try {
 
-            String query = "INSERT INTO patientRecords(patient_id, Record, date) VALUES(?,?,CURRENT_DATE)";
+            String query = "INSERT INTO patientRecords(patient_id, Record, doctorId, date) VALUES(?,?,?,CURRENT_DATE)";
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setInt(1, record.patient_id);
             statement.setString(2, record.record);
+            statement.setInt(3, record.d_id);
             statement.executeUpdate();
             statement.close();
             return true;
