@@ -49,6 +49,10 @@ public class Signup {
 
         } catch (SQLException ex) {
             System.out.println(ex);
+            if(ex.toString().contains("A UNIQUE constraint failed (UNIQUE constraint failed: user.username)"))
+            {
+                return "false-username";
+            }
             return "false";
         }
 

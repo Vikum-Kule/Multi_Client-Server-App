@@ -10,18 +10,21 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class ClientHandler implements Runnable {
     private Socket clientSoc;
     private BufferedReader in;
     private PrintWriter out;
     private boolean loginflag;
+    boolean isAlive;
 
     public ClientHandler (Socket clientSoc) throws IOException{
         this.clientSoc = clientSoc;
         out = new PrintWriter(clientSoc.getOutputStream(),true);
         in  = new BufferedReader( new InputStreamReader( clientSoc.getInputStream()));
         loginflag = false;
+        isAlive = true;
     }
 
 
@@ -59,7 +62,12 @@ public class ClientHandler implements Runnable {
             }
 
         } catch (IOException | SQLException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
+            if (e.toString().contains("java.net.SocketException: Connection reset")){
+                System.out.println("Disconnected..");
+                isAlive=false;
+
+            }
         }
         finally {
             out.close();
@@ -167,6 +175,9 @@ public class ClientHandler implements Runnable {
                 if (resultSet[0].contains("true")){
                     loginflag = true;
                     out.println("Logged/"+resultSet[1]);
+                }
+                else if(resultSet[0].contains("false-username")){
+                    out.println("Already exist");
                 }
                 else {
                     out.println("invalid");

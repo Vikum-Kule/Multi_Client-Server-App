@@ -64,7 +64,8 @@ public class PatientData {
 
 //            String query = "select date,Record from patientRecords where patient_id = ?";
             String query = "SELECT date,Record,full_name FROM patientRecords " +
-                    "INNER JOIN user ON user.user_id =patientRecords.doctorId where patient_id = ?";
+                    "INNER JOIN user ON user.user_id =patientRecords.doctorId where patient_id = ? " +
+                    "ORDER BY date(date) DESC";
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setInt(1, p_id);
             ResultSet set = statement.executeQuery();

@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Client {
     private  static final String SERVER = "127.0.0.1";
-    private  static final int PORT = 9090;
+    private  static int PORT = 9090;
     static Socket socket= null;
     static BufferedReader input=null;
     static PrintWriter out=null;
@@ -48,7 +48,7 @@ public class Client {
                         //out.println(loginInputs);
                         String result = checkConnectionOUT(loginInputs, in, out);
                         String[] resultSet = result.split("/");
-                        System.out.println(result);
+                        //System.out.println(result);
                         if (result.contains("Logged")){
                             clientId = resultSet[1];
                             return true;
@@ -95,6 +95,10 @@ public class Client {
                         if (result.contains("Logged")){
                             clientId = resultSet[1];
                             return true;
+                        }
+                        else if (result.contains("Already exist")){
+                            System.out.println("Your account already exist.. Try again");
+                            break;
                         }
                         else {
                             System.out.println("Something went wrong.. Try again");
@@ -215,7 +219,7 @@ public class Client {
         boolean serverDown= false;
         String reply= "";
         int retryCount= 1;
-        System.out.println("request: "+ request);
+        //System.out.println("request: "+ request);
         while (retry){
             try {
                 if(serverDown){
@@ -233,7 +237,7 @@ public class Client {
                 out.println(request);
                 if (!request.equals("Search")){
                     reply = input.readLine();
-                    System.out.println("reply"+reply);
+                   // System.out.println("reply"+reply);
                 }
                 retry = false;
             }catch (Exception e){
@@ -308,15 +312,21 @@ public class Client {
     public static  void main (String[] args) throws InterruptedException, IOException {
 
         boolean loginFalg= false;
-        try {
-            socket = new Socket(SERVER, PORT);
-            input = new BufferedReader( new InputStreamReader( socket.getInputStream()));
-            out = new PrintWriter(socket.getOutputStream(), true);
-            loginFalg = loginStatus(input, out);
+        int runs = 1000000;
+        for (int x = 0; x<runs; x++){
+            try {
+                socket = new Socket(SERVER, PORT);
+                input = new BufferedReader( new InputStreamReader( socket.getInputStream()));
+                out = new PrintWriter(socket.getOutputStream(), true);
+                // loginFalg = loginStatus(input, out);
+                System.out.println("run: "+x);
 
-        }catch (IOException e){
-            System.err.println(e);
+            }catch (IOException e){
+                System.err.println(e);
+            }
+
         }
+
 
     while (true){
         if (loginFalg){
